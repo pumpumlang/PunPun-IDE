@@ -1,0 +1,5 @@
+{
+  "name": "punpun-ide",
+  "version-string": "0.5.1",
+  "dependencies": ["libarchive"]
+}

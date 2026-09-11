@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=PunPun IDE
+GenericName=Integrated Development Environment
+Comment=Native IDE for PunPun, C and C++
+Exec=punpun-ide %F
+Icon=punpun-ide
+Categories=Development;IDE;TextEditor;
+Keywords=punpun;pp;code;editor;compiler;c;c++;
+MimeType=text/x-punpun;text/x-csrc;text/x-c++src;text/x-chdr;text/x-c++hdr;text/markdown;text/plain;
+Terminal=false
+StartupNotify=true
+StartupWMClass=punpun-ide

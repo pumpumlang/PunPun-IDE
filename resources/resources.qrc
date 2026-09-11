@@ -1,0 +1,29 @@
+<RCC>
+  <qresource prefix="/">
+    <file>branding/punpun-mark.svg</file>
+    <file>branding/punpun-logo-dark.svg</file>
+    <file>branding/punpun-logo-light.svg</file>
+    <file>icons/add.svg</file>
+    <file>icons/close.svg</file>
+    <file>icons/debug-alt.svg</file>
+    <file>icons/folder.svg</file>
+    <file>icons/run-all.svg</file>
+    <file>icons/save.svg</file>
+    <file>icons/search.svg</file>
+    <file>icons/settings.svg</file>
+    <file>icons/source-control.svg</file>
+    <file>icons/terminal.svg</file>
+    <file>fluent/folder.svg</file>
+    <file>fluent/search.svg</file>
+    <file>fluent/play.svg</file>
+    <file>file-icons/c.svg</file>
+    <file>file-icons/cpp.svg</file>
+    <file>file-icons/h.svg</file>
+    <file>file-icons/markdown.svg</file>
+    <file>file-icons/json.svg</file>
+    <file>file-icons/javascript.svg</file>
+    <file>file-icons/python.svg</file>
+    <file>js/builtin-extension.js</file>
+    <file>punpun/doctor.pp</file>
+  </qresource>
+</RCC>

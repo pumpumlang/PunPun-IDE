@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 220" width="660" height="220" role="img" aria-label="PunPun programming language">
+  <title>PunPun programming language</title>
+  <defs><linearGradient id="ppTile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a2130"/><stop offset="1" stop-color="#0d1119"/></linearGradient></defs>
+  <g transform="translate(0 20) scale(0.3515625)"><rect x="0" y="0" width="512" height="512" rx="112" fill="url(#ppTile)"/><rect x="4" y="4" width="504" height="504" rx="108" fill="none" stroke="#2b3648" stroke-width="8"/><g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="40"><g stroke="#b9ff4a"><path d="M94 138 V374"/><circle cx="154" cy="198" r="60"/></g><g stroke="#66e3ff"><path d="M298 138 V374"/><circle cx="358" cy="198" r="60"/></g></g></g>
+  <g stroke="#f6f7fa" transform="translate(229 70.6) scale(0.787)" fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"><path d="M11 0 V100"/><path d="M11 0 H41 A28 28 0 0 1 41 56 H11"/><path d="M109 28 V78 A22 22 0 0 0 153 78 V28"/><path d="M153 28 V100"/><path d="M193 100 V50 A22 22 0 0 1 237 50 V100"/><path d="M289 0 V100"/><path d="M289 0 H319 A28 28 0 0 1 319 56 H289"/><path d="M387 28 V78 A22 22 0 0 0 431 78 V28"/><path d="M431 28 V100"/><path d="M471 100 V50 A22 22 0 0 1 515 50 V100"/></g>
+</svg>
