@@ -119,11 +119,33 @@ void CodeEditor::configure(int fontSize, const QString &family, int tabWidth,
     }
     base.removeDuplicates();
     base.sort(Qt::CaseInsensitive);
-    setCompletionItems(base);
+    baseCompletionItems_ = base;
+    languageSymbols_.clear();
+    rebuildCompletionModel();
     refreshDecorations();
 }
 
 void CodeEditor::setCompletionItems(const QStringList &items) {
+    baseCompletionItems_ = items;
+    rebuildCompletionModel();
+}
+
+void CodeEditor::setLanguageSymbols(const QStringList &symbols) {
+    // What the compiler reports for this file, merged with the built-in words
+    // rather than replacing them. PPC's completion answers with the symbols it
+    // knows -- every builtin of whatever version is installed, which is how a
+    // newer PunPun works here without changing the IDE -- but it does not
+    // return keywords, so replacing the list outright dropped `fn`, `let`,
+    // `contract` and the rest until the file was reopened.
+    languageSymbols_ = symbols;
+    rebuildCompletionModel();
+}
+
+void CodeEditor::rebuildCompletionModel() {
+    QStringList items = baseCompletionItems_;
+    items << languageSymbols_;
+    items.removeDuplicates();
+    items.sort(Qt::CaseInsensitive);
     completionItems_ = items;
     auto *oldModel = completer_->model();
     completer_->setModel(new QStringListModel(items, completer_));

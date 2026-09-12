@@ -112,6 +112,10 @@ if(BUILD_TESTING)
       COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_bridge.py $<TARGET_FILE:ppide-pp-bridge>)
     add_test(NAME source_audit
       COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/source_audit.py)
+    # Compares the offline vocabulary against whatever toolchain is installed.
+    # Skips cleanly when there is none, so it does not gate a toolchain-free build.
+    add_test(NAME language_currency
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_language_currency.py)
     if(UNIX)
       add_test(NAME terminal_protocol
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_terminal_protocol.py)

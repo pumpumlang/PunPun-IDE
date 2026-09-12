@@ -50,6 +50,16 @@ with the compiler.
 
 ### Added
 
+- Completion merges the compiler's symbols with the built-in words instead of
+  replacing them. PPC answers `textDocument/completion` with the builtins of
+  whichever toolchain is installed -- verified against 1.5.0, whose sixty-six
+  new GUI, networking and process builtins appear with no IDE change -- but it
+  does not return keywords, so replacing the list dropped `fn`, `let` and
+  `contract` until the file was reopened.
+- The offline fallback table is transcribed from PunPun 1.5, and
+  `tests/test_language_currency.py` compares it against whatever toolchain is
+  installed: offering a name the compiler does not have fails, drift the other
+  way is reported. It skips when no toolchain is present.
 - `src/PunPunLanguage.h`: the keyword, type and builtin tables in one place,
   transcribed from the compiler's `token.hpp` and `builtins.cpp`. The
   highlighter, the completer and the analyzer share it, so they cannot drift

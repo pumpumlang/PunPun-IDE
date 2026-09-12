@@ -79,32 +79,63 @@ inline QVector<LegacyForm> legacyForms() {
     };
 }
 
-/// Standard-library calls available without importing anything, taken from the
-/// compiler's builtin table. Internal `pp_*` runtime symbols are excluded:
-/// they are not callable from source.
+/// Builtin calls available without importing anything, transcribed from the
+/// compiler's builtin table (PunPun 1.5). Internal `pp_*` runtime symbols are
+/// excluded: they are not callable from source.
+///
+/// This is the OFFLINE FALLBACK, not the authority. Whenever PPC is running,
+/// `textDocument/completion` answers with the builtins of whichever toolchain
+/// is actually installed, and `CodeEditor::setLanguageSymbols` merges those in
+/// -- so a newer PunPun works here without the IDE being rebuilt. This table is
+/// what remains when no toolchain is present.
+///
+/// `tests/test_language_currency.py` holds it to that: where a toolchain is
+/// available it asks the compiler what it knows and fails if this table offers
+/// anything the compiler does not have. Entries the compiler has and this table
+/// lacks are reported but not fatal, because the merge above covers them.
 inline QStringList builtins() {
     return {
         "abs", "acos", "append_text", "arg", "arg_count", "asin", "assert", "at",
         "atan", "atan2", "bytes", "bytes_at", "bytes_concat", "bytes_from_text",
         "bytes_len", "bytes_push", "bytes_put", "bytes_slice", "bytes_to_text",
         "cancel", "cancelled", "ceil", "char_at", "char_str", "clock_ms", "concat",
-        "contains", "cos", "current_dir", "day_of", "decimal", "drop", "ends_with",
-        "env_has", "env_or", "exit", "exp", "fabs", "file_exists", "file_size",
-        "floor", "fmod", "gui_available", "gui_message", "hour_of",
-        "https_available", "https_error", "https_request", "https_status", "hypot",
+        "contains", "cos", "cpu_count", "current_dir", "day_of", "decimal", "drop",
+        "ends_with", "env_has", "env_or", "env_set", "exit", "exp", "fabs",
+        "file_exists", "file_size", "floor", "fmod", "gui_available",
+        "gui_canvas_clear", "gui_canvas_line", "gui_canvas_rect",
+        "gui_canvas_text", "gui_event_key", "gui_event_text", "gui_event_widget",
+        "gui_event_window", "gui_event_x", "gui_event_y", "gui_headless",
+        "gui_message", "gui_poll", "gui_post_event", "gui_redraw",
+        "gui_widget_create", "gui_widget_destroy", "gui_widget_height",
+        "gui_widget_set_bounds", "gui_widget_set_enabled", "gui_widget_set_range",
+        "gui_widget_set_text", "gui_widget_set_value", "gui_widget_set_visible",
+        "gui_widget_text", "gui_widget_value", "gui_widget_width", "gui_widget_x",
+        "gui_widget_y", "gui_window_close", "gui_window_create",
+        "gui_window_height", "gui_window_open", "gui_window_set_title",
+        "gui_window_show", "gui_window_width", "hostname", "hour_of",
+        "https_available", "https_body_bytes", "https_error", "https_headers_raw",
+        "https_request", "https_request_bytes", "https_status", "hypot",
         "index_of", "is_dir", "is_infinite", "is_nan", "join", "last_index_of",
         "len", "list", "list_at", "list_clear", "list_dir", "list_pop",
         "list_push", "list_put", "list_size", "log", "log10", "log2", "make_dir",
         "make_dirs", "map", "map_clear", "map_get", "map_get_or", "map_has",
         "map_keys", "map_put", "map_remove", "map_size", "minute_of", "month_of",
-        "move", "now_ms", "numbers", "pad_left", "pad_right", "panic",
+        "move", "net_available", "net_eof", "net_error", "net_last_host",
+        "net_last_port", "net_resolve", "net_socket_close",
+        "net_socket_local_port", "net_socket_peer_host", "net_socket_peer_port",
+        "net_socket_recv", "net_socket_send", "net_socket_set_nodelay",
+        "net_socket_shutdown", "net_socket_wait_readable",
+        "net_socket_wait_writable", "net_tcp_accept", "net_tcp_connect",
+        "net_tcp_listen", "net_timed_out", "net_udp_bind", "net_udp_recv_from",
+        "net_udp_send_to", "now_ms", "numbers", "pad_left", "pad_right", "panic",
         "parse_float", "parse_int", "path_extension", "path_join", "path_name",
-        "path_parent", "platform", "pop", "pow", "print", "println", "push", "put",
-        "random_bytes", "random_float", "random_int", "random_seed", "read_bytes",
-        "read_line", "read_text", "remove_dir", "remove_file", "rename_file",
-        "repeat", "replace", "round", "run_command", "say", "second_of", "sin",
-        "size", "sleep_ms", "slice", "slice_get", "slice_len", "sort", "split",
-        "sqrt", "starts_with", "tan", "task_done", "task_group", "task_group_add",
+        "path_parent", "platform", "pop", "pow", "print", "println",
+        "process_capture", "process_status", "push", "put", "random_bytes",
+        "random_float", "random_int", "random_seed", "read_bytes", "read_line",
+        "read_text", "remove_dir", "remove_file", "rename_file", "repeat",
+        "replace", "round", "run_command", "say", "second_of", "sin", "size",
+        "sleep_ms", "slice", "slice_get", "slice_len", "sort", "split", "sqrt",
+        "starts_with", "tan", "task_done", "task_group", "task_group_add",
         "task_group_cancel", "task_group_close", "task_group_done",
         "task_group_pending", "task_group_wait", "task_group_wait_for", "text",
         "text_float", "to_lower", "to_upper", "trim", "utf8_len", "utf8_valid",

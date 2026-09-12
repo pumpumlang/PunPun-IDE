@@ -47,6 +47,9 @@ public:
     void applyDiagnostics(const QVector<EditorDiagnostic> &items);
     const QVector<EditorDiagnostic> &diagnostics() const { return diagnostics_; }
     void setCompletionItems(const QStringList &items);
+    /// Symbols the compiler reports for this file. Merged with the built-in
+    /// words, never substituted for them.
+    void setLanguageSymbols(const QStringList &symbols);
     QString currentWord() const;
     QPoint cursorGlobalBottom() const;
     void showCompletion();
@@ -110,6 +113,10 @@ private:
     SyntaxHighlighter *highlighter_ = nullptr;
     QCompleter *completer_ = nullptr;
     QStringList completionItems_;
+    QStringList baseCompletionItems_;
+    QStringList languageSymbols_;
+
+    void rebuildCompletionModel();
     QVector<EditorDiagnostic> diagnostics_;
     QTimer hoverTimer_;
     QPoint pendingHoverPos_;

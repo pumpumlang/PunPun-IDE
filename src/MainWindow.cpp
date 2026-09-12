@@ -1602,7 +1602,7 @@ void MainWindow::startLanguageService() {
     connect(lsp_, &LspClient::completionResult, this,
             [this](quint64 token, const QStringList &items) {
                 if (token != pendingCompletionToken_ || !pendingCompletionEditor_ || items.isEmpty()) return;
-                pendingCompletionEditor_->setCompletionItems(items);
+                pendingCompletionEditor_->setLanguageSymbols(items);
                 pendingCompletionEditor_->showCompletion();
             });
     connect(lsp_, &LspClient::stopped, this,
