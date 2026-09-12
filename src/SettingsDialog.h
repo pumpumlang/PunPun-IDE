@@ -5,6 +5,7 @@
 class IdeSettings;
 class QCheckBox;
 class QComboBox;
+class QLineEdit;
 class QSpinBox;
 class QTableWidget;
 class QPlainTextEdit;
@@ -24,6 +25,7 @@ private:
     QSpinBox *fontSize_ = nullptr;
     QSpinBox *tabWidth_ = nullptr;
     QSpinBox *interval_ = nullptr;
+    QLineEdit *toolchainDir_ = nullptr;
     QSpinBox *terminalFontSize_ = nullptr;
     QCheckBox *wrap_ = nullptr;
     QCheckBox *autosave_ = nullptr;

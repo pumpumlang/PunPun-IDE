@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.5.2
+
+Run works on a normally installed system, and the language intelligence agrees
+with the compiler.
+
+### Fixed
+
+- **Run did nothing.** Pressing F5 on a PunPun file produced no output, no
+  error and no terminal activity on a machine where `ppc` was installed and
+  worked from a shell. Two causes, both fixed:
+  - The IDE looked for the toolchain only in its own managed directory and on
+    `PATH`. PunPun's installer puts `ppc` in `~/.local/bin` and makes it
+    reachable by appending to the shell profile — which a desktop launcher, a
+    `.desktop` entry and an AppImage never read. Discovery now covers
+    `~/.local/bin`, `~/.punpun/bin`, `/usr/local/bin`, `/opt/punpun/bin`,
+    `$PUNPUN_PREFIX`, `$PUNPUN_HOME`, the open project's `build/` directory and
+    the Windows install locations, before falling back to `PATH`. The IDE's
+    terminal inherits the same list, so a command typed there resolves the
+    compiler the Run button uses.
+  - When the compiler genuinely was missing, Run returned in silence after
+    writing one line to a side panel. Every refusal now opens the terminal and
+    says what is missing, where it looked, and the three ways to fix it. The
+    same applies to running a header, an unsupported file type, or a C/C++ file
+    with no host compiler installed.
+- `Settings → Toolchain` sets the directory explicitly when discovery cannot
+  find an unusual installation. It takes priority over every other location.
+- Double-clicking a file in the Explorer opened it *and* started an inline
+  rename on top of it. Renaming stays on the context menu.
+- The offline analyzer reported the modern `import` as a mistake and
+  recommended `bring`, `pin` and `var`-style bindings — the spellings PPC
+  answers with migration warning W2000. The direction is reversed: legacy forms
+  are reported, each naming the modern spelling the compiler would.
+- Word-level rules no longer match inside strings and comments, so prose
+  containing "no", "each" or "give" is not reported as migration-dialect code.
+  Ambiguous words are reported only where a statement can begin.
+- Findings are no longer duplicated. Where PPC has already reported a line, the
+  offline hint for that line stands down.
+- Completion offered `trait` and `impl`, which PunPun does not have, along with
+  seven migration keywords, and was missing `contract`, `object`, `meets`,
+  `import`, `for`/`in` and every builtin beyond a hand-picked sixteen.
+- Highlighting covers the 1.4 grammar: `contract`, `object`, `meets`, `init`,
+  `sealed`, `self`, `import`, `match`/`case` and the rest. Migration keywords
+  are painted in a muted style rather than as ordinary keywords.
+- The bundled environment doctor and the settings font preview were written in
+  the migration dialect. Both are modern PunPun now — they are the first
+  PunPun many people read.
+- Run invokes the documented `ppc run` rather than the `go` alias.
+
+### Added
+
+- `src/PunPunLanguage.h`: the keyword, type and builtin tables in one place,
+  transcribed from the compiler's `token.hpp` and `builtins.cpp`. The
+  highlighter, the completer and the analyzer share it, so they cannot drift
+  apart from each other or from PPC again.
+- An analyzer test suite pinning the direction of every PunPun rule, and four
+  new source-audit checks covering toolchain discovery, Run's reporting, and
+  the shared vocabulary.
+
 ## 0.5.1
 
 Bug-fix pass over the 0.5 preview.

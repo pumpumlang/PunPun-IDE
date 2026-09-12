@@ -1,5 +1,7 @@
 #include "SyntaxHighlighter.h"
 
+#include "PunPunLanguage.h"
+
 #include <QColor>
 #include <QFont>
 #include <QTextDocument>
@@ -59,27 +61,28 @@ void SyntaxHighlighter::rebuild(const QStringList &extraKeywords) {
     const auto moduleFmt = makeFormat("#C8C8C8");
 
     if (language_ == PPIDE_LANG_PUNPUN) {
-        QStringList flow = {"if", "else", "when", "otherwise", "while", "for", "match",
-                            "return", "give", "break", "continue", "async", "await",
-                            "launch", "done", "where", "move", "ref"};
-        QStringList declaration = {"fn", "craft", "let", "mut", "pin", "const", "struct",
-                                   "enum", "trait", "impl", "public", "private", "extern",
-                                   "bring", "as", "gives"};
+        QStringList flow = PunPunLanguage::flowKeywords();
+        QStringList declaration = PunPunLanguage::declarationKeywords();
+        // The migration dialect is painted too -- it still compiles, and a file
+        // mid-migration should not go monochrome -- but in the muted comment
+        // colour, so legacy spellings read as something to move off.
+        QStringList legacy;
+        for (const auto &form : PunPunLanguage::legacyForms()) legacy << form.legacy;
+        legacy << "done" << "from" << "until" << "sealed";
+
         flow << extraKeywords;
         addWords(flow, keywordFmt_);
         addWords(declaration, declarationFmt);
-        addWords({"str", "String", "int", "i64", "i32", "u64", "u32", "float", "f64",
-                  "f32", "bool", "bytes", "void", "List", "Map", "Result", "Option",
-                  "Task", "Slice", "nums"}, typeFmt_);
-        addWords({"yes", "no", "true", "false", "none"}, constantFmt);
-        addWords({"say", "platform", "current_dir", "env_has", "env_or", "len", "contains",
-                  "split", "join", "trim", "starts_with", "ends_with", "run_command",
-                  "exit", "random_int", "random_float", "random_bytes"}, builtinFmt);
+        addWords(PunPunLanguage::typeNames(), typeFmt_);
+        addWords(PunPunLanguage::constants(), constantFmt);
+        addWords(PunPunLanguage::builtins(), builtinFmt);
+        addWords(legacy, makeFormat("#8A8A8A", false, true));
 
         rules_.push_back({QRegularExpression(R"(\b(?:fn|craft)\s+([A-Za-z_]\w*))"), functionFmt, 1});
-        rules_.push_back({QRegularExpression(R"(\b(?:struct|enum|trait|impl)\s+([A-Za-z_]\w*))"), typeFmt_, 1});
-        rules_.push_back({QRegularExpression(R"(\b(?:let|mut|pin|const)\s+([A-Za-z_]\w*))"), builtinFmt, 1});
-        rules_.push_back({QRegularExpression(R"(\bbring\s+([A-Za-z_][\w.:]*))"), moduleFmt, 1});
+        rules_.push_back({QRegularExpression(R"(\b(?:struct|object|enum|contract|shape)\s+([A-Za-z_]\w*))"), typeFmt_, 1});
+        rules_.push_back({QRegularExpression(R"(\bmeets\s+([A-Za-z_]\w*))"), typeFmt_, 1});
+        rules_.push_back({QRegularExpression(R"(\b(?:let|mut|pin|keep|const)\s+([A-Za-z_]\w*))"), builtinFmt, 1});
+        rules_.push_back({QRegularExpression(R"(\b(?:import|bring)\s+([A-Za-z_][\w.:]*))"), moduleFmt, 1});
         rules_.push_back({QRegularExpression(R"(\b([A-Za-z_]\w*)(?=::))"), typeFmt_, 1});
         rules_.push_back({QRegularExpression(R"((?:::|\.)\s*([A-Za-z_]\w*))"), propertyFmt_, 1});
         rules_.push_back({QRegularExpression(R"(\b([A-Za-z_]\w*)\s*(?=\())"), functionFmt, 1});

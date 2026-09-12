@@ -59,6 +59,11 @@ public:
     QString lastProject() const;
     void setLastProject(const QString &value);
 
+    /// Directory holding `ppc`/`pp`, when the user has one the IDE cannot
+    /// discover on its own. Empty means "search the usual places".
+    QString toolchainDir() const;
+    void setToolchainDir(const QString &value);
+
     QMap<QString, QString> keybindings() const;
     void setKeybinding(const QString &action, const QString &sequence);
 

@@ -1,27 +1,35 @@
-# PunPun IDE 0.5 Native Preview
+<h1 align="center">PunPun IDE</h1>
 
-PunPun IDE is a native desktop IDE focused on PunPun 1.3+, C, C++, headers and Markdown. The editor/runtime is C++20 + Qt 6. Python is build/release tooling only and is not in the finished application's hot path.
+<p align="center">
+  A native desktop IDE for <a href="https://github.com/pumpumlang/punpun">PunPun</a>, C and C++.<br>
+  C++20 and Qt 6. No Electron, no bundled browser, no second compiler.
+</p>
 
-Version 0.5 is the first pass aimed at feeling like an editor rather than a collection of Qt widgets that accidentally share a window.
+<p align="center">
+  <img alt="version 0.5.2" src="https://img.shields.io/badge/version-0.5.2-b9ff4a?style=flat-square&labelColor=11151e">
+  <img alt="PunPun 1.4" src="https://img.shields.io/badge/PunPun-1.4-66e3ff?style=flat-square&labelColor=11151e">
+  <img alt="Qt 6" src="https://img.shields.io/badge/Qt-6.4%2B-41cd52?style=flat-square&labelColor=11151e">
+  <img alt="MIT" src="https://img.shields.io/badge/license-MIT-f6f7fa?style=flat-square&labelColor=11151e">
+</p>
 
-## Highlights in 0.5
+<p align="center">
+  <img src="docs/images/punpun-ide.png" alt="PunPun IDE running a PunPun program" width="900">
+</p>
 
-- VS Code-inspired workbench: activity bar, Explorer/Search/Run/Extensions sidebars, editor tabs, collapsible Problems/Output/Terminal panel, status bar and a persistent right-side **Code Assistant**.
-- Code Assistant combines real compiler/LSP diagnostics with a small offline Local Review layer. It shows error/warning/hint counts, source, diagnostic code, likely cause and a suggested next step. Compiler diagnostics remain authoritative.
-- Diagnostics render as gutter markers and wave underlines. Hovering a squiggle shows the diagnostic and suggestion directly at the code.
-- A caret-line highlight drawn from the active theme, which yields while a selection is active so selected text never reads as a floating box. Hover cards are dismissed while selecting/dragging and matching brackets use local highlights.
-- Expanded highlighting for PunPun, C, C++, headers, Markdown, JSON, JavaScript and Python. PunPun `str`/`String`, builtins, declarations, functions, modules, properties, constants and escapes have distinct token roles.
-- `Shift+Alt+F` formats the document. PunPun uses PPC's real `fmt`; C/C++/headers use `clang-format` when installed.
-- Live C/C++ checking analyzes the unsaved editor buffer using the host compiler with `-fsyntax-only`. PunPun uses PPC/LSP for live semantics and `ppc check --json` for explicit checks.
-- Integrated terminal keeps shell cwd/export state, preserves command history, displays partial prompts immediately, and sends input directly to a running child program instead of accidentally treating stdin as another shell command.
-- Explorer right-click: **New PunPun File, New File, New Folder, Rename, Delete**.
-- PPX package-manager GUI and native compatibility bridge.
-- Automatic stable PunPun toolchain updates. The IDE follows GitHub `releases/latest`, downloads into private app data, verifies SHA-256, smoke-tests PPC, then switches the IDE/LSP/terminal to the verified toolchain.
-- Bundled PunPun-native environment doctor reports platform, cwd, PATH, `PPC_RUNTIME`, `PPC_STDLIB`, `CC` and `CXX` through PunPun's own `std.system` API.
+## What it is
+
+An editor, a project tree, real compiler diagnostics and a working terminal, in
+one native window. PPC — the PunPun compiler — is the source of truth for
+everything semantic: the IDE runs `ppc serve --stdio` for live semantics and
+`ppc check --json` for explicit checks, rather than maintaining a second,
+disagreeing idea of the language.
+
+Press <kbd>F5</kbd> and the program builds and runs in the terminal below the
+editor, in the file's own directory, with its output where you are looking.
 
 ## Install
 
-### Linux — download and double-click
+### Linux
 
 Download `PunPun-IDE-v<version>-x86_64.AppImage` from the
 [latest release](https://github.com/pumpumlang/punpun-ide/releases/latest),
@@ -33,115 +41,160 @@ chmod +x PunPun-IDE-v*-x86_64.AppImage
 ```
 
 The AppImage carries Qt, libarchive and their dependencies, so nothing else
-needs installing. Most desktops run it on a double-click once the executable
-bit is set; some ask the first time.
+needs installing.
 
-To build one yourself:
+### Windows
+
+Run `PunPun-IDE-<version>-win64.exe` from the same release. It installs to
+Program Files with Start-menu and desktop shortcuts and an uninstaller.
+`PunPun-IDE-v<version>-windows-x64.zip` is the portable alternative: unpack and
+double-click `bin\punpun-ide.exe`.
+
+### The PunPun toolchain
+
+Install PunPun itself to run and check `.pp` files:
 
 ```sh
-./scripts/build_appimage.sh
+curl -fsSL https://raw.githubusercontent.com/pumpumlang/punpun/main/install.sh | sh
 ```
 
-### Windows — installer
+The IDE finds it without any further setup. It looks in `~/.local/bin` (where
+the installer puts it), `~/.punpun/bin`, `/usr/local/bin`, `/opt/punpun/bin`,
+`$PUNPUN_PREFIX`, its own managed toolchain directory, the open project's
+`build/` directory, and `PATH` — in that order.
 
-Download and run `PunPun-IDE-<version>-win64.exe` from the same release. It
-installs to Program Files with Start-menu and desktop shortcuts and a matching
-uninstaller. `PunPun-IDE-v<version>-windows-x64.zip` is the portable
-alternative: unpack it and double-click `bin\punpun-ide.exe`.
+> Finding it only through `PATH` is not enough, and this is worth knowing if you
+> package a PunPun tool yourself: the installer extends `PATH` by appending to
+> your shell profile, and a program started from a desktop icon, a `.desktop`
+> entry or an AppImage never reads those files. That is why the Run button used
+> to do nothing on a freshly installed system.
 
-### PunPun toolchain
+If discovery still misses your installation, set the directory explicitly under
+**Settings → Toolchain**. It takes priority over everything else, and the IDE's
+terminal inherits it too. Without any toolchain the editor, C/C++ support and
+terminal still work, and Run says exactly what it could not find and where it
+looked.
 
-The IDE runs and checks PunPun through `ppc` from the
-[PunPun toolchain](https://github.com/pumpumlang/punpun). Put `ppc` on `PATH`,
-or let the built-in updater fetch the latest stable release. Without it the
-editor, C/C++ support and terminal still work; `pp doctor` and the IDE's
-environment panel report what is missing.
+## Features
 
-## Editing
+**Editing.** Indentation carries across Enter and steps in after a block opens.
+Brackets and quotes close as you type, typing a closer steps over it, and
+backspace between a fresh pair removes both. Matching delimiters highlight near
+the caret. Every one of these is switchable under **Settings → Editor**.
 
-| Shortcut | Action |
+**Diagnostics.** Compiler and LSP findings render as gutter markers and wave
+underlines; hovering a squiggle shows the diagnostic and a suggested next step.
+The Code Assistant panel groups them by severity with the code, the likely
+cause, and what to do about it.
+
+**Offline analysis.** A local layer answers while a buffer is unsaved or no
+toolchain is installed. Its vocabulary is transcribed from PPC's own keyword
+and builtin tables, so it names the same migration spellings the compiler
+does — and stands down on any line the compiler has already spoken about.
+
+**Terminal.** Keeps shell working directory and exported variables across
+commands, preserves history, shows partial prompts immediately, and sends what
+you type to a running child program instead of queueing it as another shell
+command.
+
+**Languages.** PunPun, C, C++, headers, Markdown, JSON, JavaScript and Python
+are highlighted. C and C++ are checked live from the unsaved buffer with the
+host compiler's `-fsyntax-only`.
+
+**Toolchain updates.** The IDE follows the official GitHub
+`releases/latest`, downloads into private app data, verifies SHA-256,
+smoke-tests PPC, and only then switches the IDE, LSP and terminal over. Your
+system installation is never overwritten.
+
+Also included: a PPX package-manager GUI, a native plugin ABI, and an
+environment doctor written in PunPun itself.
+
+## Shortcuts
+
+| Action | Shortcut | | Action | Shortcut |
+| --- | --- | --- | --- | --- |
+| Run | <kbd>F5</kbd> | | Open file | <kbd>Ctrl</kbd>+<kbd>O</kbd> |
+| Debug | <kbd>Ctrl</kbd>+<kbd>F5</kbd> | | Open folder | <kbd>Ctrl</kbd>+<kbd>K</kbd> <kbd>Ctrl</kbd>+<kbd>O</kbd> |
+| Check | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> | | Save | <kbd>Ctrl</kbd>+<kbd>S</kbd> |
+| Terminal | <kbd>Ctrl</kbd>+<kbd>`</kbd> | | Find | <kbd>Ctrl</kbd>+<kbd>F</kbd> |
+| Code Assistant | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> | | Complete | <kbd>Ctrl</kbd>+<kbd>Space</kbd> |
+| Toggle comment | <kbd>Ctrl</kbd>+<kbd>/</kbd> | | Format | <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd> |
+| Indent / outdent | <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | | Duplicate line | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> |
+| Move lines | <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd> | | | |
+
+All of them are editable in Settings.
+
+## Build from source
+
+Requirements: a C++20 compiler, CMake 3.24+, Qt 6.4+ (Widgets, Network, Svg,
+Qml, and Test for the test suite) and libarchive.
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+ninja -C build
+./build/punpun-ide
+```
+
+Run the tests:
+
+```sh
+ctest --test-dir build --output-on-failure
+```
+
+On Arch and CachyOS, `./run.sh` installs missing build dependencies,
+configures, builds and launches in one step (`--rebuild`, `--test`,
+`--no-launch`). To produce an AppImage: `./scripts/build_appimage.sh`.
+
+## How PunPun is driven
+
+PPC remains the semantic source of truth. The IDE does not maintain a second
+PunPun compiler.
+
+| Purpose | Command |
 | --- | --- |
-| `F5` | Run the current file |
-| `Ctrl+Shift+B` | Check the current file |
-| `Ctrl+/` | Toggle line comment |
-| `Tab` / `Shift+Tab` | Indent / outdent the selected lines |
-| `Ctrl+Shift+D` | Duplicate selection or line |
-| `Alt+Up` / `Alt+Down` | Move the selected lines |
-| `Ctrl+Space` | Trigger completion |
-| ``Ctrl+` `` | Toggle the terminal |
-
-Indentation carries across Enter and steps in after a block opens (`:` for
-PunPun, `{` for C-likes). Brackets and quotes close as you type, typing a
-closer steps over it, and backspace between a fresh pair removes both. Every
-one of these is switchable under **Settings → Editor**.
+| Language service | `ppc serve --stdio` |
+| Run a file | `ppc run file.pp` |
+| Explicit diagnostics | `ppc check --json file.pp` |
+| Formatting | `ppc fmt file.pp` |
+| Environment probe | bundled `resources/punpun/doctor.pp` |
 
 ## Architecture
 
-The languages have specific jobs instead of being mixed together for decoration:
+Each language has a job rather than being mixed in for decoration:
 
-- **C++20 + Qt 6**: windowing, editor, Explorer, terminal, Run/Check/Debug, LSP, package manager, settings and updater.
-- **C11**: stable native plugin/file-type ABI in `c_api/punpun_plugin_api.h`.
-- **JavaScript**: sandboxed language-extension metadata/snippets through `QJSEngine`. Scripts are not handed filesystem or shell objects.
-- **Python 3**: source audit, tests and release packaging only.
+- **C++20 + Qt 6** — windowing, editor, Explorer, terminal, Run/Check/Debug,
+  LSP client, package manager, settings and updater.
+- **C11** — the stable native plugin and file-type ABI in
+  `c_api/punpun_plugin_api.h`.
+- **JavaScript** — sandboxed language-extension metadata and snippets through
+  `QJSEngine`. Scripts get no filesystem or shell objects.
+- **Python 3** — source audit, tests and release packaging only; never in the
+  finished application's path.
 
-## Run on CachyOS / Arch
+`src/PunPunLanguage.h` holds the language vocabulary in one place, transcribed
+from the compiler's `token.hpp` and `builtins.cpp`, so the highlighter, the
+completer and the analyzer cannot drift apart from each other or from PPC.
 
-Extract the source and run:
+## Validation
 
-```fish
-./run.sh
-```
+`ctest` runs the ABI and bridge tests, the editor and analyzer behaviour tests
+under Qt's offscreen platform, the terminal protocol test, and an 84-check
+source and resource audit. Linux x86-64 is the validated platform; Windows is
+release-qualified through its own workflow.
 
-First run installs only missing native build dependencies, configures/builds, then launches. Later runs launch the existing binary immediately when sources are unchanged.
+## Related
 
-Useful commands:
-
-```fish
-./run.sh --rebuild      # clean rebuild
-./run.sh --test         # build if needed, run tests, then launch
-./run.sh --no-launch    # build only
-```
-
-No Python virtual environment is required to run the finished IDE.
-
-## Keyboard defaults
-
-| Action | Shortcut |
+| Repository | Contents |
 | --- | --- |
-| Open file | `Ctrl+O` |
-| Open folder | `Ctrl+K, Ctrl+O` |
-| Save | `Ctrl+S` |
-| Find | `Ctrl+F` |
-| Trigger completion | `Ctrl+Space` |
-| Format document | `Shift+Alt+F` |
-| Run | `F5` |
-| Debug | `Ctrl+F5` |
-| Check | `Ctrl+Shift+B` |
-| Terminal | `Ctrl + backtick` |
-| Code Assistant | `Ctrl+Shift+A` |
-
-Shortcuts are editable in Settings.
-
-## PunPun integration
-
-PPC remains the semantic source of truth. The IDE does not maintain a second PunPun compiler.
-
-- language service: `ppc serve --stdio`
-- standalone run: `ppc go file.pp` (`go` and `run` are PPC aliases)
-- explicit diagnostics: `ppc check --json file.pp`
-- formatting: `ppc fmt file.pp`
-- environment probe: bundled `resources/punpun/doctor.pp`
-
-The same PunPun-native doctor is also maintained in the PunPun repository under `tools/ide/doctor.pp`.
-
-## Toolchain updates
-
-The IDE checks the official latest stable GitHub release at startup and at the configured interval, 10 minutes by default. Updates are installed privately and activated only after digest verification and a `ppc --version` smoke test. The user's system installation is not overwritten.
+| [`punpun`](https://github.com/pumpumlang/punpun) | The language: compiler, runtime, standard library |
+| [`punpun-ppx`](https://github.com/pumpumlang/punpun-ppx) | PPX package manager and registry |
+| [`punpun-docs`](https://github.com/pumpumlang/punpun-docs) | Documentation site and reference |
 
 ## Assets
 
-PunPun branding is used for `.pp`. Microsoft Fluent UI System Icons provide app chrome, and Material Icon Theme provides colorful C/C++/header/Markdown/JSON/JavaScript/Python file icons. Source links and license notices are under `resources/`.
+PunPun branding is used for `.pp`. Microsoft Fluent UI System Icons provide the
+app chrome and Material Icon Theme provides the C/C++/header/Markdown/JSON/
+JavaScript/Python file icons. Source links and license notices are under
+`resources/`.
 
-## Current validation boundary
-
-This source package contains strict non-Qt ABI/bridge tests plus a 75-check source/resource regression audit. A complete GUI compile/render still requires a machine with the Qt 6 development SDK. `./run.sh` is the intended CachyOS test path.
+PunPun IDE is distributed under the [MIT License](LICENSE).

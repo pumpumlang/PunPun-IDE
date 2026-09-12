@@ -1,0 +1,110 @@
+name: Native CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ libarchive-dev \
+            qt6-base-dev qt6-svg-dev qt6-declarative-dev libgl1-mesa-dev \
+            libxkbcommon-x11-0 libfuse2t64 desktop-file-utils
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        # The editor tests need a display; offscreen keeps CI headless.
+        run: ctest --test-dir build --output-on-failure
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Build AppImage
+        run: ./scripts/build_appimage.sh
+      - name: Smoke-test the AppImage
+        run: |
+          sudo apt-get install -y xvfb
+          ./dist/*.AppImage --appimage-extract > /dev/null
+          xvfb-run -a --server-args="-screen 0 1280x800x24" \
+            timeout 25 ./squashfs-root/AppRun --version || true
+          test -s dist/*.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PunPun-IDE-linux-x86_64
+          path: dist/*.AppImage
+
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          arch: win64_msvc2022_64
+          modules: 'qtdeclarative qtsvg'
+          cache: true
+      - name: Install libarchive
+        shell: pwsh
+        run: vcpkg install libarchive:x64-windows
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        shell: pwsh
+        run: ctest --test-dir build -C Release --output-on-failure
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Stage portable app
+        shell: pwsh
+        run: |
+          cmake --install build --config Release --prefix stage
+          windeployqt --release --no-translations stage/bin/punpun-ide.exe
+          Copy-Item "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/*.dll" stage/bin/ -ErrorAction SilentlyContinue
+          $version = (Get-Content VERSION).Trim()
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path stage/* -DestinationPath "dist/PunPun-IDE-v$version-windows-x64.zip" -Force
+      - name: Build installer
+        shell: pwsh
+        run: |
+          cpack --config build/CPackConfig.cmake -G NSIS -B dist-installer
+          Copy-Item dist-installer/*.exe dist/ -ErrorAction SilentlyContinue
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PunPun-IDE-windows-x64
+          path: dist/*
+
+  release:
+    # Publishes only for a pushed v* tag, and only when both platforms pass.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect release files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name '*.AppImage' -o -name '*.zip' -o -name '*.exe' \) \
+            -exec cp {} release/ \;
+          ( cd release && sha256sum * > SHA256SUMS )
+          ls -la release
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(PunPunIDE VERSION 0.5.1 LANGUAGES C CXX)
+project(PunPunIDE VERSION 0.5.2 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
@@ -18,6 +18,7 @@ qt_add_executable(punpun-ide
     src/MainWindow.cpp src/MainWindow.h
     src/AssistantPanel.cpp src/AssistantPanel.h
     src/SmartAnalyzer.cpp src/SmartAnalyzer.h
+    src/PunPunLanguage.h
     src/CodeEditor.cpp src/CodeEditor.h
     src/SyntaxHighlighter.cpp src/SyntaxHighlighter.h
     src/Theme.cpp src/Theme.h
@@ -89,6 +90,21 @@ if(BUILD_TESTING)
     target_compile_definitions(ppide-editor-test PRIVATE QT_NO_KEYWORDS)
     add_test(NAME editor COMMAND ppide-editor-test)
     set_tests_properties(editor PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+    qt_add_executable(ppide-analyzer-test
+      tests/test_analyzer.cpp
+      src/SmartAnalyzer.cpp src/SmartAnalyzer.h
+      src/PunPunLanguage.h
+      src/CodeEditor.cpp src/CodeEditor.h
+      src/SyntaxHighlighter.cpp src/SyntaxHighlighter.h
+      src/ScriptHost.cpp src/ScriptHost.h
+      c_api/punpun_plugin_api.c c_api/punpun_plugin_api.h
+    )
+    target_include_directories(ppide-analyzer-test PRIVATE src c_api)
+    target_link_libraries(ppide-analyzer-test PRIVATE Qt6::Widgets Qt6::Test Qt6::Qml)
+    target_compile_definitions(ppide-analyzer-test PRIVATE QT_NO_KEYWORDS)
+    add_test(NAME analyzer COMMAND ppide-analyzer-test)
+    set_tests_properties(analyzer PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
   endif()
   find_package(Python3 COMPONENTS Interpreter)
   if(Python3_Interpreter_FOUND)

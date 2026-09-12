@@ -35,6 +35,8 @@ int IdeSettings::updateIntervalMinutes() const { return s_.value("punpun/updateI
 void IdeSettings::setUpdateIntervalMinutes(int v){ s_.setValue("punpun/updateIntervalMinutes",qBound(5,v,1440)); }
 QString IdeSettings::lastProject() const { return s_.value("workspace/lastProject", "").toString(); }
 void IdeSettings::setLastProject(const QString &v){ s_.setValue("workspace/lastProject",v); }
+QString IdeSettings::toolchainDir() const { return s_.value("punpun/toolchainDir", "").toString(); }
+void IdeSettings::setToolchainDir(const QString &v){ s_.setValue("punpun/toolchainDir",v.trimmed()); }
 QMap<QString,QString> IdeSettings::keybindings() const {
     QMap<QString,QString> out{{"file.open","Ctrl+O"},{"file.openFolder","Ctrl+K, Ctrl+O"},{"file.save","Ctrl+S"},{"file.saveAll","Ctrl+Shift+S"},
                              {"file.new","Ctrl+N"},{"run.run","F5"},{"run.debug","Ctrl+F5"},{"run.check","Ctrl+Shift+B"},

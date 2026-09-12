@@ -286,6 +286,10 @@ QWidget *MainWindow::buildExplorerPage() {
     tree_->setAnimated(true);
     tree_->setUniformRowHeights(true);
     tree_->setContextMenuPolicy(Qt::CustomContextMenu);
+    // Double-click opens the file. QAbstractItemView's default also starts an
+    // inline rename on the same gesture, so every open left the name in an edit
+    // box over the tree. Renaming stays on the context menu, where it belongs.
+    tree_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     for (int column = 1; column < 4; ++column) tree_->hideColumn(column);
     connect(tree_, &QTreeView::doubleClicked, this, [this](const QModelIndex &index) {
         const QString path = fsModel_->filePath(index);
@@ -689,13 +693,14 @@ void MainWindow::openProject(const QString &path, bool remember) {
     const QFileInfo info(path);
     if (!info.isDir()) return;
     projectRoot_ = info.absoluteFilePath();
+    toolchain_.setProjectRoot(projectRoot_);
     if (remember) settings_.setLastProject(projectRoot_);
     projectLabel_->setText(info.fileName().isEmpty() ? projectRoot_ : info.fileName().toUpper());
     projectLabel_->setToolTip(projectRoot_);
     fsModel_->setRootPath(projectRoot_);
     tree_->setRootIndex(fsModel_->index(projectRoot_));
     statusProject_->setText(info.fileName());
-    terminal_->start(projectRoot_, toolchain_.privateBinDir());
+    terminal_->start(projectRoot_, toolchain_.searchPaths().join(QDir::listSeparator()));
     scripts_.reload();
     refreshExtensions();
     startLanguageService();
@@ -1177,6 +1182,18 @@ void MainWindow::runProcess(const QString &program, const QStringList &args,
     process->start(program, args);
 }
 
+void MainWindow::reportRunProblem(const QString &message) {
+    // Run is started from a keystroke and watched in the terminal, so that is
+    // where the reason has to appear. Anything quieter reads as "nothing
+    // happened", which is how this looked before.
+    bottomPanel_->show();
+    bottomTabs_->setCurrentIndex(2);
+    terminal_->showNotice("[run] " + message);
+    appendOutput(message);
+    assistant_->setEnvironmentSummary(message.section('\n', 0, 0));
+    statusBar()->showMessage(message.section('\n', 0, 0), 8000);
+}
+
 void MainWindow::runCurrent() {
     auto *editor = currentEditor();
     if (!editor) return;
@@ -1187,30 +1204,50 @@ void MainWindow::runCurrent() {
     if (editor->language() == PPIDE_LANG_PUNPUN) {
         const QString ppc = toolchain_.ppcPath();
         if (ppc.isEmpty()) {
-            assistant_->setEnvironmentSummary("PunPun: compiler unavailable. Checking the latest stable toolchain now…");
+            // Reporting this only to the assistant panel made Run look broken:
+            // the terminal opened on nothing and no message named the cause.
+            // Whatever happens, Run says something where the user is looking.
+            reportRunProblem(
+                "PunPun compiler (ppc) not found, so there is nothing to run.\n\n" +
+                toolchain_.discoveryReport() +
+                "\nFix it in one of these ways:\n"
+                "  * Install PunPun:  curl -fsSL https://raw.githubusercontent.com/"
+                "pumpumlang/punpun/main/install.sh | sh\n"
+                "  * Already installed? Point the IDE at it in "
+                "Tools > Settings > Toolchain.\n"
+                "  * Or let the IDE fetch a release: Tools > PunPun Toolchain.\n\n"
+                "A shell that finds `ppc` does not prove the IDE will: the installer "
+                "extends PATH from your shell profile, which a desktop launch never reads.");
             toolchain_.checkForUpdates(true);
             return;
         }
         bottomPanel_->show();
         bottomTabs_->setCurrentIndex(2);
-        terminal_->runCommand(ppc, {"go", path}, cwd);
+        terminal_->runCommand(ppc, {"run", path}, cwd);
         return;
     }
 
     if (editor->language() == PPIDE_LANG_HEADER) {
-        appendOutput("Header files are checked, not executed. Use Check or open a C/C++ translation unit.");
-        toggleBottomPanel(1);
+        reportRunProblem("Header files are checked, not executed.\n"
+                         "Use Check (Ctrl+Shift+B), or open the .c/.cpp file that includes this header.");
         return;
     }
 
     const bool cpp = editor->language() == PPIDE_LANG_CPP;
     if (editor->language() != PPIDE_LANG_C && !cpp) {
-        appendOutput("This file type is not directly runnable.");
-        toggleBottomPanel(1);
+        reportRunProblem(QString("%1 is not a file type this IDE can run.\n"
+                                 "Run works on PunPun (.pp), C and C++ sources.")
+                             .arg(QFileInfo(path).fileName()));
         return;
     }
 
     const QString compiler = compilerFor(editor->language(), cpp);
+    if (compiler.isEmpty()) {
+        reportRunProblem(QString("No %1 compiler found on this system, so the file cannot be built.\n"
+                                 "Install one (for example `sudo apt install %2`) and run again.")
+                             .arg(cpp ? "C++" : "C", cpp ? "g++" : "gcc"));
+        return;
+    }
     const QString build = QDir(cwd).filePath(".punpun-ide/build");
     QDir().mkpath(build);
     QString outputPath = QDir(build).filePath(QFileInfo(path).completeBaseName());
@@ -1498,7 +1535,17 @@ QVector<EditorDiagnostic> MainWindow::parseNativeDiagnostics(
 QVector<EditorDiagnostic> MainWindow::combinedDiagnostics(const QString &path) const {
     const QString key = normalizedPath(path);
     QVector<EditorDiagnostic> result = compilerDiagnostics_.value(key);
-    result += smartDiagnostics_.value(key);
+
+    // The offline analyzer covers the same ground as the compiler on purpose:
+    // it is what answers while a buffer is unsaved, or when no toolchain is
+    // installed. Once the compiler has spoken about a line, its version wins,
+    // so a migration keyword is reported once rather than twice.
+    QSet<int> compilerLines;
+    for (const EditorDiagnostic &d : result) compilerLines.insert(d.line);
+    for (const EditorDiagnostic &d : smartDiagnostics_.value(key)) {
+        if (compilerLines.contains(d.line) && d.severity >= 3) continue;
+        result += d;
+    }
     std::stable_sort(result.begin(), result.end(), [](const EditorDiagnostic &a, const EditorDiagnostic &b) {
         if (a.severity != b.severity) return a.severity < b.severity;
         if (a.line != b.line) return a.line < b.line;
@@ -1781,7 +1828,7 @@ void MainWindow::configureUpdateSignals() {
     connect(&toolchain_, &ToolchainManager::installed, this,
             [this](const QString &tag) {
                 statusPunPun_->setText("PunPun " + tag);
-                terminal_->start(projectRoot_, toolchain_.privateBinDir());
+                terminal_->start(projectRoot_, toolchain_.searchPaths().join(QDir::listSeparator()));
                 startLanguageService();
                 runEnvironmentDoctor();
             });

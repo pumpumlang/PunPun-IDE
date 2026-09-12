@@ -1,5 +1,6 @@
 #include "CodeEditor.h"
 
+#include "PunPunLanguage.h"
 #include "ScriptHost.h"
 #include "SyntaxHighlighter.h"
 
@@ -110,11 +111,11 @@ void CodeEditor::configure(int fontSize, const QString &family, int tabWidth,
 
     QStringList base = scripts ? scripts->keywords(key) : QStringList{};
     if (language_ == PPIDE_LANG_PUNPUN) {
-        base << QStringList{"bring", "fn", "craft", "let", "mut", "pin", "as",
-                            "return", "give", "launch", "done", "when", "otherwise",
-                            "match", "struct", "enum", "trait", "impl", "public",
-                            "private", "async", "await", "say", "Result", "Option",
-                            "List", "Map", "str", "String", "i64", "f64", "bool"};
+        // Previously a hand-written list that offered `craft`, `pin`, `done`
+        // and `bring` -- the migration dialect the compiler warns about -- and
+        // `trait`/`impl`, which PunPun does not have. It now comes from the
+        // compiler's own tables.
+        base << PunPunLanguage::completionWords();
     }
     base.removeDuplicates();
     base.sort(Qt::CaseInsensitive);

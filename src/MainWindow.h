@@ -146,6 +146,7 @@ private:
     void appendProblem(const QString &path, const EditorDiagnostic &diagnostic);
     void handleProblemsActivated();
 
+    void reportRunProblem(const QString &message);
     void runCurrent();
     void checkCurrent();
     void debugCurrent();

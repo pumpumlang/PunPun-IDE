@@ -13,6 +13,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QStandardPaths>
@@ -50,18 +51,71 @@ QString ToolchainManager::privateBinDir() const {
     return appDataDir() + "/toolchain/current/bin";
 }
 
+void ToolchainManager::setProjectRoot(const QString &path) {
+    projectRoot_ = path;
+}
+
+QStringList ToolchainManager::searchPaths() const {
+    // PunPun's installer puts `ppc` in ~/.local/bin and makes it reachable by
+    // appending to the *shell* rc files. A desktop launcher, a .desktop file
+    // and an AppImage never read those, so PATH alone finds nothing and Run
+    // appears to do nothing at all. Look where the installer actually writes.
+    QStringList paths;
+    auto add = [&paths](const QString &path) {
+        if (path.isEmpty()) return;
+        const QString absolute = QDir(path).absolutePath();
+        if (!paths.contains(absolute) && QDir(absolute).exists()) paths << absolute;
+    };
+
+    if (settings_) add(settings_->toolchainDir());
+    add(privateBinDir());
+
+    const auto env = QProcessEnvironment::systemEnvironment();
+    if (env.contains("PUNPUN_PREFIX")) add(env.value("PUNPUN_PREFIX") + "/bin");
+    if (env.contains("PUNPUN_HOME")) add(env.value("PUNPUN_HOME") + "/bin");
+
+    const QString home = QDir::homePath();
+    add(home + "/.local/bin");            // install.sh default
+    add(home + "/.punpun/bin");
+    add(home + "/bin");
+#ifdef Q_OS_WIN
+    add(env.value("LOCALAPPDATA") + "/Programs/PunPun/bin");
+    add(env.value("ProgramFiles") + "/PunPun/bin");
+#else
+    add("/usr/local/bin");
+    add("/opt/punpun/bin");
+    add("/usr/bin");
+#endif
+
+    // A source checkout builds the compiler in place; running from one should
+    // use the compiler that checkout just built, not an older installed copy.
+    if (!projectRoot_.isEmpty()) {
+        add(projectRoot_ + "/build");
+        add(projectRoot_);
+    }
+    return paths;
+}
+
 QString ToolchainManager::findExecutable(const QStringList &names) const {
-    const QString privateBin = privateBinDir();
-    for (const auto &name : names) {
-        const QString path = privateBin + "/" + name;
-        const QFileInfo info(path);
-        if (info.exists() && info.isFile()) return info.absoluteFilePath();
+    for (const auto &directory : searchPaths()) {
+        for (const auto &name : names) {
+            const QFileInfo info(directory + "/" + name);
+            if (info.exists() && info.isFile() && info.isExecutable())
+                return info.absoluteFilePath();
+        }
     }
     for (const auto &name : names) {
         const QString path = QStandardPaths::findExecutable(name);
         if (!path.isEmpty()) return path;
     }
     return {};
+}
+
+QString ToolchainManager::discoveryReport() const {
+    QString text = "Looked for ppc in:\n";
+    for (const auto &directory : searchPaths()) text += "  " + QDir::toNativeSeparators(directory) + "\n";
+    text += "  and every directory on PATH\n";
+    return text;
 }
 
 QString ToolchainManager::ppcPath() const { return findExecutable({"ppc", "ppc.exe"}); }

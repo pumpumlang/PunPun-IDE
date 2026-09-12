@@ -12,6 +12,10 @@
 #include <QKeySequence>
 #include <QLabel>
 #include <QMessageBox>
+#include <QDir>
+#include <QFileDialog>
+#include <QHBoxLayout>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSet>
 #include <QSpinBox>
@@ -57,7 +61,7 @@ SettingsDialog::SettingsDialog(IdeSettings *settings, QWidget *parent)
     preview_ = new QPlainTextEdit;
     preview_->setReadOnly(true);
     preview_->setFixedHeight(96);
-    preview_->setPlainText("bring std.io\n\nlaunch:\n    say \"hello from PunPun\"\ndone");
+    preview_->setPlainText("import std.io\n\nlaunch {\n    say(\"hello from PunPun\");\n}");
 
     appearanceForm->addRow("Theme", theme_);
     appearanceForm->addRow("Editor font", font_);
@@ -137,6 +141,35 @@ SettingsDialog::SettingsDialog(IdeSettings *settings, QWidget *parent)
     updateForm->addRow("Check every", interval_);
     updateForm->addRow(updateNote);
     tabs->addTab(updates, "PunPun Updates");
+
+    // --- Toolchain --------------------------------------------------------
+    // A last resort for an installation the IDE cannot discover on its own.
+    // Normally discovery handles it, including the ~/.local/bin case a desktop
+    // launch used to miss because PATH there does not come from the shell.
+    auto *toolchainPage = new QWidget;
+    auto *toolchainForm = new QFormLayout(toolchainPage);
+    toolchainDir_ = new QLineEdit(settings_->toolchainDir());
+    toolchainDir_->setPlaceholderText("Detected automatically — leave empty unless Run cannot find ppc");
+    auto *browse = new QPushButton("Browse…");
+    connect(browse, &QPushButton::clicked, this, [this] {
+        const QString chosen = QFileDialog::getExistingDirectory(
+            this, "Select the directory containing ppc",
+            toolchainDir_->text().isEmpty() ? QDir::homePath() : toolchainDir_->text());
+        if (!chosen.isEmpty()) toolchainDir_->setText(chosen);
+    });
+    auto *toolchainRow = new QWidget;
+    auto *toolchainRowLayout = new QHBoxLayout(toolchainRow);
+    toolchainRowLayout->setContentsMargins(0, 0, 0, 0);
+    toolchainRowLayout->addWidget(toolchainDir_, 1);
+    toolchainRowLayout->addWidget(browse);
+    auto *toolchainNote = new QLabel(
+        "The directory holding the `ppc` and `pp` programs — for a source checkout, "
+        "its `build` directory. Setting this takes priority over every other location, "
+        "and the IDE's terminal inherits it too.");
+    toolchainNote->setWordWrap(true);
+    toolchainForm->addRow("Toolchain directory", toolchainRow);
+    toolchainForm->addRow(toolchainNote);
+    tabs->addTab(toolchainPage, "Toolchain");
 
     // --- Keybindings ------------------------------------------------------
     auto *keyPage = new QWidget;
@@ -252,6 +285,7 @@ bool SettingsDialog::save() {
     settings_->setTerminalFontSize(terminalFontSize_->value());
     settings_->setAutoUpdatePunPun(autoupdate_->isChecked());
     settings_->setUpdateIntervalMinutes(interval_->value());
+    settings_->setToolchainDir(toolchainDir_->text());
     for (int row = 0; row < keys_->rowCount(); ++row) {
         // Column 0 shows a friendly label; the stored id rides in UserRole.
         const QString id = keys_->item(row, 0)->data(Qt::UserRole).toString();

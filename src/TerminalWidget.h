@@ -28,6 +28,9 @@ public:
                     const QString &workingDirectory = {});
     void setFontSize(int points);
     bool isRunning() const { return process_.state() == QProcess::Running; }
+    /// Write an IDE message into the terminal transcript, so that an action
+    /// the user started from the terminal reports its outcome there too.
+    void showNotice(const QString &text);
 
 Q_SIGNALS:
     void processText(const QString &text);

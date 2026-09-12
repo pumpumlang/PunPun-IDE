@@ -282,6 +282,12 @@ void TerminalWidget::submitInput() {
     process_.write((wrapShellCommand(command) + "\n").toLocal8Bit());
 }
 
+void TerminalWidget::showNotice(const QString &text) {
+    QString body = text;
+    if (!body.endsWith('\n')) body += '\n';
+    appendText("\n" + body);
+}
+
 void TerminalWidget::sendCommand(const QString &command) {
     if (command.trimmed().isEmpty()) return;
     if (foregroundBusy_) {

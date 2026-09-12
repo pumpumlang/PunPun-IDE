@@ -32,6 +32,19 @@ public:
     QString ppPath() const;
     QString ppxPath() const;
     QString privateBinDir() const;
+
+    /// Every directory the toolchain is looked for in, most specific first.
+    /// The terminal prepends these to PATH so a command typed there resolves
+    /// the same compiler the Run button does.
+    QStringList searchPaths() const;
+
+    /// A source checkout builds its compiler into the project, so the open
+    /// project participates in discovery. Empty clears it.
+    void setProjectRoot(const QString &path);
+
+    /// Human-readable account of where the toolchain was looked for, shown
+    /// when it could not be found.
+    QString discoveryReport() const;
     QString installedVersion() const;
     QString installedTag() const;
     QString latestTag() const { return latestTag_; }
@@ -54,6 +67,7 @@ private:
     QJsonObject latestRelease_;
     ReleaseAssetInfo latestAsset_;
     QString latestTag_;
+    QString projectRoot_;
     bool checking_ = false;
     bool downloading_ = false;
 

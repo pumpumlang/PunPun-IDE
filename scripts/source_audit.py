@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parents[1]
 required = [
     "CMakeLists.txt", "run.sh", "src/MainWindow.cpp", "src/MainWindow.h",
     "src/AssistantPanel.cpp", "src/AssistantPanel.h", "src/SmartAnalyzer.cpp", "src/SmartAnalyzer.h",
+    "src/PunPunLanguage.h",
     "src/CodeEditor.cpp", "src/CodeEditor.h", "src/SyntaxHighlighter.cpp", "src/SyntaxHighlighter.h",
     "src/TerminalWidget.cpp", "src/TerminalWidget.h", "src/ToolchainManager.cpp", "src/ToolchainManager.h",
     "src/LspClient.cpp", "src/LspClient.h", "src/ScriptHost.cpp", "src/ScriptHost.h",
@@ -29,6 +30,8 @@ theme = (root / "src/Theme.cpp").read_text()
 toolchain = (root / "src/ToolchainManager.cpp").read_text()
 lsp = (root / "src/LspClient.cpp").read_text()
 assistant = (root / "src/AssistantPanel.cpp").read_text()
+analyzer = (root / "src/SmartAnalyzer.cpp").read_text()
+language = (root / "src/PunPunLanguage.h").read_text()
 qrc_path = root / "resources/resources.qrc"
 qrc = qrc_path.read_text()
 doctor = (root / "resources/punpun/doctor.pp").read_text()
@@ -43,13 +46,22 @@ checks = {
     "live smart checks": "SmartAnalyzer::analyze" in main and "runNativeSyntaxCheck(editor, false)" in main,
     "unsaved C/C++ buffer checking": '"-fsyntax-only"' in main and "process->write(source)" in main,
     "compiler diagnostics JSON": '{"check", "--json", path}' in main,
-    # `ppc go` runs a PunPun file directly; the call also passes the file's own
-    # directory so the program can open files by relative path.
-    "PunPun standalone run": 'runCommand(ppc, {"go", path}, cwd)' in main,
+    # `ppc run` compiles and runs a PunPun file; the call also passes the file's
+    # own directory so the program can open files by relative path.
+    "PunPun standalone run": 'runCommand(ppc, {"run", path}, cwd)' in main,
+    # Run bailed silently when the compiler was missing, which read as "the Run
+    # button is broken". Every refusal has to reach the terminal.
+    "run reports why it did not run":
+        "reportRunProblem" in main and "showNotice" in terminal,
+    # PunPun's installer puts ppc in ~/.local/bin and extends PATH from the
+    # shell profile, which a desktop launch never reads. Discovery cannot rely
+    # on PATH alone or the IDE finds nothing.
+    "toolchain discovery beyond PATH":
+        '.local/bin' in toolchain and "searchPaths" in toolchain,
     "PunPun formatter": '{"fmt", path}' in main,
     "header is not executable": "Header files are checked, not executed" in main,
     "environment doctor resource": "PUNPUN_IDE_DOCTOR_V1" in doctor and "punpun/doctor.pp" in qrc,
-    "doctor std.system": "bring std.system" in doctor and "system_platform()" in doctor,
+    "doctor std.system": "import std.system" in doctor and "system_platform()" in doctor,
     # The caret-line band is welcome, but it must never paint while a selection
     # is active: that is what made selected text look like a floating box.
     "selection hover fix": "hoverDismissRequested" in editor,
@@ -57,7 +69,14 @@ checks = {
         "highlightLine_ && !textCursor().hasSelection()" in editor,
     "matching brackets": "matching delimiters near the caret" in editor,
     "rich highlighting": "propertyFmt_" in highlighter and "escapeFmt_" in highlighter,
-    "str highlighting": '"str", "String"' in highlighter,
+    # One vocabulary table, shared by the highlighter, the completer and the
+    # analyzer, transcribed from the compiler. Three private copies had drifted
+    # into painting `trait`/`impl` and recommending `bring` over `import`.
+    "str highlighting": '"str",' in language and '"String"' in language,
+    "shared language table":
+        "PunPunLanguage" in highlighter and "PunPunLanguage" in analyzer,
+    "modern import is not reported as legacy":
+        '{"bring", "import"' in language and '{"import"' not in language,
     "terminal interactive input": "foregroundBusy_" in terminal and "Program input" in terminal,
     "terminal partial prompts": "Show prompts/output even when programs do not print" in terminal,
     # QString::arg() leaves "%%" alone, so the shell protocol must spell the
