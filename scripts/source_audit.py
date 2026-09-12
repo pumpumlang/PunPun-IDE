@@ -19,26 +19,30 @@ missing = [item for item in required if not (root / item).exists()]
 if missing:
     raise SystemExit("Missing required files: " + ", ".join(missing))
 
-main = (root / "src/MainWindow.cpp").read_text()
-editor = (root / "src/CodeEditor.cpp").read_text()
-highlighter = (root / "src/SyntaxHighlighter.cpp").read_text()
-terminal = (root / "src/TerminalWidget.cpp").read_text()
+# Always UTF-8, never the platform default. Python on Windows decodes with the
+# ANSI codepage (cp1252), which cannot represent the em dashes and arrows these
+# sources contain -- the audit died with UnicodeDecodeError on the Windows
+# runner while passing everywhere else.
+main = (root / "src/MainWindow.cpp").read_text(encoding="utf-8")
+editor = (root / "src/CodeEditor.cpp").read_text(encoding="utf-8")
+highlighter = (root / "src/SyntaxHighlighter.cpp").read_text(encoding="utf-8")
+terminal = (root / "src/TerminalWidget.cpp").read_text(encoding="utf-8")
 # Comment text must not satisfy or break code-shape checks.
 terminal_code = "\n".join(line for line in terminal.splitlines()
                           if not line.lstrip().startswith("//"))
-theme = (root / "src/Theme.cpp").read_text()
-toolchain = (root / "src/ToolchainManager.cpp").read_text()
-lsp = (root / "src/LspClient.cpp").read_text()
-assistant = (root / "src/AssistantPanel.cpp").read_text()
-analyzer = (root / "src/SmartAnalyzer.cpp").read_text()
-language = (root / "src/PunPunLanguage.h").read_text()
+theme = (root / "src/Theme.cpp").read_text(encoding="utf-8")
+toolchain = (root / "src/ToolchainManager.cpp").read_text(encoding="utf-8")
+lsp = (root / "src/LspClient.cpp").read_text(encoding="utf-8")
+assistant = (root / "src/AssistantPanel.cpp").read_text(encoding="utf-8")
+analyzer = (root / "src/SmartAnalyzer.cpp").read_text(encoding="utf-8")
+language = (root / "src/PunPunLanguage.h").read_text(encoding="utf-8")
 qrc_path = root / "resources/resources.qrc"
-qrc = qrc_path.read_text()
-doctor = (root / "resources/punpun/doctor.pp").read_text()
-cmake = (root / "CMakeLists.txt").read_text()
-vcpkg = (root / "vcpkg.json").read_text()
-workflow = (root / ".github/workflows/native-ci.yml").read_text()
-version = (root / "VERSION").read_text().strip()
+qrc = qrc_path.read_text(encoding="utf-8")
+doctor = (root / "resources/punpun/doctor.pp").read_text(encoding="utf-8")
+cmake = (root / "CMakeLists.txt").read_text(encoding="utf-8")
+vcpkg = (root / "vcpkg.json").read_text(encoding="utf-8")
+workflow = (root / ".github/workflows/native-ci.yml").read_text(encoding="utf-8")
+version = (root / "VERSION").read_text(encoding="utf-8").strip()
 
 checks = {
     "version synchronized": f"project(PunPunIDE VERSION {version}" in cmake,
@@ -106,10 +110,21 @@ checks = {
     "Qt6 file-dialog regression": not re.search(r"QFileDialog::get(?:Open|Save)FileName\([^;]+?\)\.first\b", main),
     "QMenuBar complete type": "#include <QMenuBar>" in main,
     "QPushButton complete type": "#include <QPushButton>" in main and "#include <QPushButton>" in assistant,
-    "QPixmap complete type": "#include <QPixmap>" in (root / "src/IconUtils.cpp").read_text(),
+    "QPixmap complete type": "#include <QPixmap>" in (root / "src/IconUtils.cpp").read_text(encoding="utf-8"),
     "CodeEditor direct Qt types": all(token in editor for token in ("#include <QFrame>", "#include <QFont>", "#include <QTextCharFormat>")),
-    "no Python runtime API": not any("Python.h" in p.read_text(errors="ignore") for p in (root / "src").glob("*.cpp")),
+    "no Python runtime API": not any("Python.h" in p.read_text(encoding="utf-8", errors="ignore") for p in (root / "src").glob("*.cpp")),
 }
+
+# Reading a source file without naming an encoding works on Linux and fails on
+# Windows, where Python falls back to the ANSI codepage. Every tool here reads
+# UTF-8 sources, so none of them may leave it to the platform.
+for script in sorted(list(root.glob("scripts/*.py")) + list(root.glob("tests/*.py"))):
+    text = script.read_text(encoding="utf-8")
+    bare = re.findall(r"\.read_text\(\s*\)", text)
+    bare += re.findall(r"(?<![\w.])open\([^)]*\)", text)
+    bare = [call for call in bare if "encoding=" not in call and "\"w" not in call
+            and "'w" not in call and '"rb"' not in call and "'rb'" not in call]
+    checks[f"names an encoding: {script.name}"] = not bare
 
 # Every CMake source/header path named under src/c_api/resources must exist.
 for match in re.finditer(r"(?m)^\s*((?:src|c_api|resources)/[^\s)]+)", cmake):
