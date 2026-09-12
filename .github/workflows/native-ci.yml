@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish a release from this run, tagged v<VERSION>"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -50,9 +55,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.*'
+          version: '6.8.3'
           arch: win64_msvc2022_64
-          modules: 'qtdeclarative qtsvg'
+          # No `modules:` line. Svg and Declarative are Qt Essentials and ship
+          # in the base install; aqt only treats add-ons (qtwebengine, qtpdf)
+          # as modules, so naming them here failed the job outright with
+          # "The packages ['qtdeclarative', 'qtsvg'] were not found".
           cache: true
       - name: Install libarchive
         shell: pwsh
@@ -88,8 +96,12 @@ jobs:
           path: dist/*
 
   release:
-    # Publishes only for a pushed v* tag, and only when both platforms pass.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publishes for a pushed v* tag, or for a manual run asking for one, and
+    # only when both platforms pass. The manual path exists because pushing a
+    # tag is not always available to whoever is cutting the release.
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.release)
     needs: [linux, windows]
     runs-on: ubuntu-24.04
     steps:
@@ -97,14 +109,26 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+      - name: Decide the tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=v$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
       - name: Collect release files
         run: |
           mkdir -p release
           find artifacts -type f \( -name '*.AppImage' -o -name '*.zip' -o -name '*.exe' \) \
             -exec cp {} release/ \;
+          # A release with no binaries is worse than no release: it looks
+          # published but installs nothing.
+          test -n "$(ls -A release)" || { echo "no build artifacts to publish"; exit 1; }
           ( cd release && sha256sum * > SHA256SUMS )
           ls -la release
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.name }}
           files: release/*
           generate_release_notes: true
