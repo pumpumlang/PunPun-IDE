@@ -58,6 +58,10 @@ checks = {
     # errors out if they are requested as add-on modules.
     "qt essentials are not requested as modules":
         "modules: 'qtdeclarative qtsvg'" not in workflow,
+    # The windows-2025 image has no NSIS, so CPack's NSIS generator cannot run
+    # unless the job installs it first.
+    "nsis is installed before cpack invokes it":
+        workflow.index("choco install nsis") < workflow.index("-G NSIS"),
     "v0.5 sources registered": "AssistantPanel.cpp" in cmake and "SmartAnalyzer.cpp" in cmake,
     "right-side assistant": "new AssistantPanel" in main and "refreshAssistantForCurrent" in main,
     "assistant severity counters": "assistantErrors" in assistant and "assistantWarnings" in assistant,

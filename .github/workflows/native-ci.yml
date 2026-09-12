@@ -62,6 +62,14 @@ jobs:
           # as modules, so naming them here failed the job outright with
           # "The packages ['qtdeclarative', 'qtsvg'] were not found".
           cache: true
+      # vcpkg builds libarchive and its whole dependency chain from source, which
+      # is twelve minutes of every run. The binary cache makes that a restore.
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/vcpkg/archives
+          key: vcpkg-x64-windows-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-x64-windows-
       - name: Install libarchive
         shell: pwsh
         # Manifest mode: vcpkg.json in the repo root declares the dependency, and
@@ -89,11 +97,22 @@ jobs:
           $version = (Get-Content VERSION).Trim()
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path stage/* -DestinationPath "dist/PunPun-IDE-v$version-windows-x64.zip" -Force
+      # The windows-2025 image does not carry NSIS, so CPack's NSIS generator
+      # failed with "Cannot find NSIS compiler makensis" after everything else
+      # had already succeeded. Install it rather than drop the installer.
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis --no-progress -y
       - name: Build installer
         shell: pwsh
         run: |
           cpack --config build/CPackConfig.cmake -G NSIS -B dist-installer
           Copy-Item dist-installer/*.exe dist/ -ErrorAction SilentlyContinue
+          # Copy-Item is best-effort, so confirm the installer really exists
+          # instead of publishing a release that is quietly missing it.
+          if (-not (Get-ChildItem dist/*.exe -ErrorAction SilentlyContinue)) {
+            throw "NSIS reported success but produced no installer"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: PunPun-IDE-windows-x64
