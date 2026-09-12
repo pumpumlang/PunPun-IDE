@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QCompleter>
+#include <QStringListModel>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -50,6 +51,8 @@ public:
     /// Symbols the compiler reports for this file. Merged with the built-in
     /// words, never substituted for them.
     void setLanguageSymbols(const QStringList &symbols);
+    /// Everything the completion popup currently offers.
+    QStringList completionItems() const { return completionItems_; }
     QString currentWord() const;
     QPoint cursorGlobalBottom() const;
     void showCompletion();
@@ -112,6 +115,7 @@ private:
     LineNumberArea *lineArea_ = nullptr;
     SyntaxHighlighter *highlighter_ = nullptr;
     QCompleter *completer_ = nullptr;
+    QStringListModel *completionModel_ = nullptr;
     QStringList completionItems_;
     QStringList baseCompletionItems_;
     QStringList languageSymbols_;

@@ -52,6 +52,8 @@ CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent) {
     setFrameStyle(QFrame::NoFrame);
 
     completer_ = new QCompleter(this);
+    completionModel_ = new QStringListModel(completer_);
+    completer_->setModel(completionModel_);
     completer_->setWidget(this);
     completer_->setCompletionMode(QCompleter::PopupCompletion);
     completer_->setCaseSensitivity(Qt::CaseInsensitive);
@@ -147,9 +149,15 @@ void CodeEditor::rebuildCompletionModel() {
     items.removeDuplicates();
     items.sort(Qt::CaseInsensitive);
     completionItems_ = items;
-    auto *oldModel = completer_->model();
-    completer_->setModel(new QStringListModel(items, completer_));
-    if (oldModel && oldModel->parent() == completer_) oldModel->deleteLater();
+    // One model for the life of the editor, updated in place.
+    //
+    // Handing the completer a new model each time looked harmless and was not:
+    // QCompleter::setModel() deletes the model it is replacing when that model
+    // is parented to the completer, which is how these were created. The code
+    // then read the old model's parent to decide whether to delete it, which
+    // was a use-after-free -- reliably fatal on the second refresh, and the
+    // second refresh is the first Ctrl+Space once the language server is up.
+    completionModel_->setStringList(items);
 }
 
 QString CodeEditor::currentWord() const {

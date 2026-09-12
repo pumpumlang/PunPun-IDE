@@ -135,6 +135,37 @@ private Q_SLOTS:
         delete editor;
     }
 
+    void completionModelCanBeReplacedRepeatedly() {
+        // Every refresh used to hand QCompleter a fresh model parented to the
+        // completer, then read the previous model's parent to decide whether to
+        // delete it. QCompleter::setModel() has already deleted that model by
+        // then -- it owns one parented to itself -- so the read was a
+        // use-after-free and the second refresh segfaulted.
+        //
+        // The second refresh is what the language server triggers on the first
+        // Ctrl+Space, so this crashed for anyone with a working toolchain.
+        auto *editor = makeEditor("a.pp", "launch {\n}\n");
+        editor->setLanguageSymbols({"host_name", "cpu_count"});
+        editor->setLanguageSymbols({"gui_poll", "net_resolve"});
+        editor->setLanguageSymbols({"say"});
+        QVERIFY(editor->completionItems().contains("say"));
+        delete editor;
+    }
+
+    void languageSymbolsDoNotDisplaceKeywords() {
+        // PPC answers completion with symbols and no keywords. Replacing the
+        // list with its reply dropped `fn`, `let` and `contract` until the file
+        // was reopened, so the two are merged.
+        auto *editor = makeEditor("a.pp", "launch {\n}\n");
+        QVERIFY(editor->completionItems().contains("contract"));
+        editor->setLanguageSymbols({"cpu_count", "hostname"});
+        const QStringList items = editor->completionItems();
+        QVERIFY2(items.contains("cpu_count"), "compiler symbol missing");
+        QVERIFY2(items.contains("contract"), "keyword displaced by compiler symbols");
+        QVERIFY2(items.contains("fn"), "keyword displaced by compiler symbols");
+        delete editor;
+    }
+
     void saveNormalisationCanBeDisabled() {
         auto *editor = makeEditor("a.pp", "keep me   ");
         editor->setEditingBehaviour(true, true, true, false, false, false);
