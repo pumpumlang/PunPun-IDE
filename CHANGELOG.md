@@ -7,6 +7,15 @@ with the compiler.
 
 ### Fixed
 
+- **Ctrl+Space crashed the IDE.** Completion killed the process outright
+  whenever the language server was running. Each refresh handed `QCompleter` a
+  new model parented to the completer, then read the previous model's parent to
+  decide whether to delete it — but `QCompleter::setModel()` has already deleted
+  that model, so the read was a use-after-free, fatal from the second refresh
+  on. The first completion response is the second refresh. The editor now owns
+  one model and updates it in place. This defect predates 0.5.2; it needed a
+  running language server to reach, and the toolchain-discovery bug below meant
+  there usually was not one.
 - **Run did nothing.** Pressing F5 on a PunPun file produced no output, no
   error and no terminal activity on a machine where `ppc` was installed and
   worked from a shell. Two causes, both fixed:
