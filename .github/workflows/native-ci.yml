@@ -64,7 +64,11 @@ jobs:
           cache: true
       - name: Install libarchive
         shell: pwsh
-        run: vcpkg install libarchive:x64-windows
+        # Manifest mode: vcpkg.json in the repo root declares the dependency, and
+        # naming a package on the command line is rejected outright in that mode
+        # -- vcpkg answers with its usage text and exit 1, which is what broke
+        # this job. The triplet is all that needs passing.
+        run: vcpkg install --triplet x64-windows
       - name: Configure
         shell: pwsh
         run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"

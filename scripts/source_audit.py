@@ -36,10 +36,24 @@ qrc_path = root / "resources/resources.qrc"
 qrc = qrc_path.read_text()
 doctor = (root / "resources/punpun/doctor.pp").read_text()
 cmake = (root / "CMakeLists.txt").read_text()
+vcpkg = (root / "vcpkg.json").read_text()
+workflow = (root / ".github/workflows/native-ci.yml").read_text()
 version = (root / "VERSION").read_text().strip()
 
 checks = {
     "version synchronized": f"project(PunPunIDE VERSION {version}" in cmake,
+    # The vcpkg manifest carries its own version string and had drifted a
+    # release behind, which is the kind of thing nobody notices until a build
+    # is labelled wrong.
+    "vcpkg manifest version synchronized": f'"version-string": "{version}"' in vcpkg,
+    # vcpkg refuses `install <package>:<triplet>` in manifest mode and answers
+    # with its usage text, failing the Windows job before it compiles anything.
+    "vcpkg installs in manifest mode":
+        "vcpkg install --triplet" in workflow and "vcpkg install libarchive:" not in workflow,
+    # Svg and Declarative are Qt Essentials, present in the base install; aqt
+    # errors out if they are requested as add-on modules.
+    "qt essentials are not requested as modules":
+        "modules: 'qtdeclarative qtsvg'" not in workflow,
     "v0.5 sources registered": "AssistantPanel.cpp" in cmake and "SmartAnalyzer.cpp" in cmake,
     "right-side assistant": "new AssistantPanel" in main and "refreshAssistantForCurrent" in main,
     "assistant severity counters": "assistantErrors" in assistant and "assistantWarnings" in assistant,
